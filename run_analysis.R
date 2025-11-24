@@ -1,0 +1,62 @@
+setwd("/Users/austenjack/Desktop/Coursera/data_cleaning/UCI_HAR_Dataset")
+
+features <- read.table('/Users/austenjack/Desktop/Coursera/data_cleaning/UCI_HAR_Dataset/features.txt', header=FALSE)
+
+
+x_train <- read.table('/Users/austenjack/Desktop/Coursera/data_cleaning/UCI_HAR_Dataset/train/X_train.txt', header=FALSE)
+
+#use the col.name argument to name the columns as they are loaded in
+
+#the y_train data stores the activity ID, so the column will be named 'activity'
+y_train <- read.table('/Users/austenjack/Desktop/Coursera/data_cleaning/UCI_HAR_Dataset/train/y_train.txt', col.names = 'activity', header=FALSE)
+
+#the subject_train data store the subject ID, so the column will be named 'subject'
+subject_train <- read.table('/Users/austenjack/Desktop/Coursera/data_cleaning/UCI_HAR_Dataset/train/subject_train.txt', col.names = 'subject', header=FALSE)
+
+x_test <- read.table('/Users/austenjack/Desktop/Coursera/data_cleaning/UCI_HAR_Dataset/test/X_test.txt', header=FALSE)
+y_test <- read.table('/Users/austenjack/Desktop/Coursera/data_cleaning/UCI_HAR_Dataset/test/y_test.txt', col.names = 'activity', header=FALSE)
+subject_test <- read.table('/Users/austenjack/Desktop/Coursera/data_cleaning/UCI_HAR_Dataset/test/subject_test.txt', col.names = 'subject', header=FALSE)
+
+#the second column of the features dataframe contains the column names for the x_test and x_train files
+colnames(x_test) <- features$V2
+colnames(x_train) <- features$V2
+
+#combine the data of the two separate testing and training data using cbind()
+
+#subject files contain an ID for the subject, y files contain an ID for the activity being done, and x files contain all the movement data for the observation
+test_set <- cbind(subject_test, y_test, x_test)
+train_set <- cbind(subject_train, y_train, x_train)
+
+#now combine both datasets with rbind
+
+full_data_set <- rbind(test_set, train_set)
+
+#subset the data frame so that it only contains columns that have data on mean or std
+
+#use grep and regular expression to subject column names that include 'subject', 'activity', 'mean', or 'std' anywhere in the column name
+
+full_data_set <- full_data_set[,grep('subject|activity|mean|std', colnames(full_data_set))]
+
+#now need to name the activities in the dataset with the activity_labels.txt file
+activity_labels <- read.table("/Users/austenjack/Desktop/Coursera/data_cleaning/UCI_HAR_Dataset/activity_labels.txt", col.names = c("id", "activity_name"))
+
+#map the activity names to their id's in the full data set
+full_data_set$activity <- factor(full_data_set$activity,
+                                 levels = activity_labels$id,
+                                 labels = activity_labels$activity_name)
+
+
+#from the final full data, make a second dataset that contains the average of each variable of each activity for each subject
+library(reshape2)
+
+# melt into long format
+long_data <- melt(full_data_set, id.vars = c("subject", "activity"))
+
+# compute mean per subject/activity/variable
+second_data_set <- dcast(long_data, subject + activity ~ variable, mean)
+
+write.table(second_data_set, file = "tidy_data.txt", row.names = FALSE)
+
+
+
+
